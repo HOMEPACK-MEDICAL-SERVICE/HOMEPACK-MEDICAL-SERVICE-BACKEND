@@ -11,13 +11,34 @@ const generateToken = (user) => {
   });
 };
 
+// controllers/authController.js
 export const signup = async (req, res, next) => {
   try {
-    const { name, email, password, phone, age, gender, medicalHistory } = req.body;
+    const {
+      name,
+      email,
+      password,
+      confirmPassword,  // <- destructure here
+      phone,
+      age,
+      gender,
+      medicalHistory
+    } = req.body;
+
+    // Early check (redundant with Joi but safer)
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Passwords do not match' });
+    }
+
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ success: false, error: 'User already exists' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'User already exists' });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
@@ -29,15 +50,26 @@ export const signup = async (req, res, next) => {
       medicalHistory,
       role: 'user'
     });
-    
+
     // Send welcome email
-    sendEmail(user.email, 'Welcome!', 'Thank you for signing up to HomePack Medical Services.');
-    
-    res.status(201).json({ success: true, data: user, token: generateToken(user) });
+    sendEmail(user.email, 'Welcome!', 'Thank you for signing up.');
+
+    // Send welcome SMS
+    if (user.phone) {
+      const smsSent = await sendSMS(user.phone, 'Welcome to our service! Thank you for signing up.');
+      if (!smsSent) {
+        console.warn(`Failed to send welcome SMS to ${user.phone}`);
+      }
+    }
+
+    res
+      .status(201)
+      .json({ success: true, data: user, token: generateToken(user) });
   } catch (error) {
     next(error);
   }
 };
+
 
 export const login = async (req, res, next) => {
   try {
