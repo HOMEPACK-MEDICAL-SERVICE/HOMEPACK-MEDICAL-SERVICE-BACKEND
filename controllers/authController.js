@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import {User} from '../models/User.js';
+import { Doctor } from '../models/Doctor.js';
 import { sendSMS } from '../utils/smsService.js';
 import { sendEmail } from '../utils/emailService.js';
 
@@ -102,6 +103,37 @@ export const facebookCallback = (req, res) => {
 
 // In-memory OTP store for demonstration (replace with persistent storage for production)
 let otpStore = {};
+
+// New function to get doctors with search and filter
+export const getDoctors = async (req, res, next) => {
+  try {
+    const { name, specialty, experience, ratings } = req.query;
+
+    // Build query object
+    const query = {};
+
+    if (name) {
+      query.name = { $regex: name, $options: 'i' }; // case-insensitive partial match
+    }
+    if (specialty) {
+      query.specialty = { $regex: specialty, $options: 'i' };
+    }
+    if (experience) {
+      // Support filtering by minimum experience
+      query.experience = { $gte: Number(experience) };
+    }
+    if (ratings) {
+      // Support filtering by minimum ratings
+      query.ratings = { $gte: Number(ratings) };
+    }
+
+    const doctors = await Doctor.find(query);
+
+    res.json({ success: true, data: doctors });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const sendOTP = async (req, res, next) => {
   try {

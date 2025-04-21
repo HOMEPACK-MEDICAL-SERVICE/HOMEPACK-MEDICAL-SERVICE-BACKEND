@@ -1,6 +1,7 @@
 import express from 'express';
 import passport from 'passport';
-import { signup, login, googleCallback, facebookCallback, sendOTP, verifyOTP } from '../controllers/authController.js';
+import { signup, login, googleCallback, facebookCallback, sendOTP, verifyOTP, getDoctors } from '../controllers/authController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -18,5 +19,7 @@ router.get('/facebook/callback', passport.authenticate('facebook', { session: fa
 // Phone OTP endpoints
 router.post('/send-otp', sendOTP);
 router.post('/verify-otp', verifyOTP);
+
+router.get('/doctors',protect, getDoctors);
 
 export default router;
