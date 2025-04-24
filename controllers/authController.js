@@ -165,3 +165,65 @@ export const verifyOTP = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get current user's profile
+export const getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, newPassword, confirmPassword } = req.body;
+
+    if (!email || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, error: 'Email, new password and confirm password are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, error: 'Passwords do not match' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password has been reset successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update current user's profile
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const updates = req.body;
+
+    // Prevent password update here for security reasons; separate endpoint needed for password change
+    if (updates.password) {
+      delete updates.password;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updates, { new: true, runValidators: true }).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+};
