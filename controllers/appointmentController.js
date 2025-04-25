@@ -185,8 +185,7 @@ export const cancelAppointment = async (req, res, next) => {
         });
     }
 
-    appointment.status = "cancelled";
-    await appointment.save();
+    await Appointment.findByIdAndDelete(appointmentId);
 
     // Send SMS notification for cancellation
     if (req.user && req.user.phone) {
